@@ -120,6 +120,15 @@ In Arduino IDE, set:
 
 This enables full warning output during build to help catch bugs and maintain quality.
 
+## 🧹 Linting
+
+We use [`cpplint`](https://github.com/cpplint/cpplint) to maintain code quality.
+
+To run it:
+
+
+pip install cpplint
+cpplint src/*.cpp src/*.h
 
 
 ## 🐞 Bug Reporting
