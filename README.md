@@ -177,7 +177,7 @@ Since AUnit is **Apache 2.0 licensed**, you're good — this satisfies the **FLO
 
 Later, if you want to automate this fully:
 
-```yaml
+yaml
 # .github/workflows/test.yml
 name: Arduino Tests
 
@@ -193,4 +193,4 @@ jobs:
       - name: Run Unit Tests
         run: pio test
 
-
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/10978/badge)](https://www.bestpractices.dev/projects/10978)
