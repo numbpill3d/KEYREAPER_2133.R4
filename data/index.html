@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PN2133 Interface</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">PN-2133 RFID/NFC Interface</h1>
+            <div class="status-bar">
+                <span class="status-indicator" id="systemStatus">OFFLINE</span>
+                <span class="connection-info" id="connectionInfo">Initializing...</span>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab-button active" data-tab="scanner">[ SCANNER ]</button>
+            <button class="tab-button" data-tab="logger">[ LOGGER ]</button>
+            <button class="tab-button" data-tab="settings">[ CONFIG ]</button>
+            <button class="tab-button" data-tab="data">[ DATA ]</button>
+        </nav>
+
+        <main class="main-content">
+            <!-- Scanner Tab -->
+            <section class="tab-panel active" id="scanner">
+                <div class="panel">
+                    <h3 class="panel-title">&gt; Manual Tag Operations</h3>
+                    <div class="controls-grid">
+                        <div class="control-group">
+                            <button class="action-button primary" id="scanButton">
+                                SCAN FOR TAG
+                            </button>
+                            <button class="action-button secondary" id="writeButton">
+                                WRITE TO TAG
+                            </button>
+                        </div>
+                        <div class="control-group">
+                            <label for="writeData" class="input-label">Data to Write:</label>
+                            <textarea id="writeData" class="text-input" 
+                                placeholder="Enter NDEF data or hex values..."
+                                rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="results-container">
+                        <h4 class="results-title">&gt; Scan Results</h4>
+                        <div class="results-display" id="scanResults">
+                            <div class="placeholder-text">
+                                [ No scan data available ]<br>
+                                Place tag near reader and click SCAN FOR TAG
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logger Tab -->
+            <section class="tab-panel" id="logger">
+                <div class="panel">
+                    <h3 class="panel-title">&gt; Silent Tag Logger</h3>
+                    <div class="logger-controls">
+                        <div class="control-row">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="silentLogging" class="toggle-input">
+                                <span class="toggle-slider"></span>
+                                Silent Logging Mode
+                            </label>
+                            <span class="status-text" id="loggingStatus">DISABLED</span>
+                        </div>
+                        <div class="control-row">
+                            <label for="scanInterval" class="input-label">Scan Interval (ms):</label>
+                            <input type="number" id="scanInterval" class="number-input" 
+                                value="1000" min="100" max="10000" step="100">
+                        </div>
+                    </div>
+
+                    <div class="entropy-monitor">
+                        <h4 class="results-title">&gt; Entropy Monitor</h4>
+                        <div class="entropy-display">
+                            <div class="entropy-row">
+                                <span class="entropy-label">Current:</span>
+                                <span class="entropy-value" id="entropyCurrent">---</span>
+                            </div>
+                            <div class="entropy-row">
+                                <span class="entropy-label">Baseline:</span>
+                                <span class="entropy-value" id="entropyBaseline">---</span>
+                            </div>
+                            <div class="entropy-row">
+                                <span class="entropy-label">Deviation:</span>
+                                <span class="entropy-value" id="entropyDeviation">---</span>
+                            </div>
+                            <div class="entropy-row">
+                                <span class="entropy-label">Status:</span>
+                                <span class="entropy-status" id="entropyStatus">NORMAL</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section class="tab-panel" id="settings">
+                <div class="panel">
+                    <h3 class="panel-title">&gt; System Configuration</h3>
+                    
+                    <div class="settings-section">
+                        <h4 class="section-title">Supabase Integration</h4>
+                        <div class="input-group">
+                            <label for="supabaseUrl" class="input-label">Supabase URL:</label>
+                            <input type="url" id="supabaseUrl" class="text-input" 
+                                placeholder="https://your-project.supabase.co">
+                        </div>
+                        <div class="input-group">
+                            <label for="supabaseKey" class="input-label">Anon Key:</label>
+                            <input type="password" id="supabaseKey" class="text-input" 
+                                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h4 class="section-title">Entropy Detection</h4>
+                        <div class="input-group">
+                            <label for="entropyThreshold" class="input-label">Threshold:</label>
+                            <input type="number" id="entropyThreshold" class="number-input" 
+                                value="50" min="10" max="200" step="5">
+                        </div>
+                        <div class="control-row">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="entropyMonitoring" class="toggle-input">
+                                <span class="toggle-slider"></span>
+                                Enable Entropy Monitoring
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button class="action-button primary" id="saveSettings">
+                            SAVE CONFIGURATION
+                        </button>
+                        <button class="action-button secondary" id="resetSettings">
+                            RESET TO DEFAULTS
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Tab -->
+            <section class="tab-panel" id="data">
+                <div class="panel">
+                    <h3 class="panel-title">&gt; Tag Logs &amp; Data Export</h3>
+                    
+                    <div class="data-controls">
+                        <button class="action-button primary" id="refreshLogs">
+                            REFRESH LOGS
+                        </button>
+                        <button class="action-button secondary" id="exportLogs">
+                            EXPORT JSON
+                        </button>
+                        <button class="action-button danger" id="clearLogs">
+                            CLEAR ALL LOGS
+                        </button>
+                    </div>
+
+                    <div class="logs-container">
+                        <div class="logs-header">
+                            <span class="log-count" id="logCount">0 entries</span>
+                            <span class="log-status" id="logStatus">Ready</span>
+                        </div>
+                        <div class="logs-display" id="logsDisplay">
+                            <div class="placeholder-text">
+                                [ No log entries available ]<br>
+                                Enable silent logging or perform manual scans to generate data
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-info">
+                <span>PN-2133 Covert RFID Interface</span>
+                <span>|</span>
+                <span id="systemTime">--:--:--</span>
+            </div>
+            <div class="footer-actions">
+                <a href="/dev" class="dev-link">[DEV]</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

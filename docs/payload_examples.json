@@ -1,0 +1,216 @@
+// PN-2133 JSON Payload Examples
+// field-tested formats for covert data transmission
+// built to survive poor network conditions and api timeouts
+
+// ===========================================
+// TAG_LOGS PAYLOAD - Standard Tag Detection
+// ===========================================
+
+// basic tag intercept - most common payload
+{
+  "uid": "A4B3C2D1",
+  "timestamp": "1690876543210",
+  "tag_type": "MIFARE_CLASSIC_1K",
+  "device_id": "PN2133"
+}
+
+// enhanced tag log with optional data fields
+{
+  "uid": "7F6E5D4C3B2A19",
+  "timestamp": "1690876543215",
+  "tag_type": "MIFARE_ULTRALIGHT",
+  "device_id": "PN2133",
+  "data": "Hello World Test Data",
+  "location_info": "Grid_A7_North_Entrance"
+}
+
+// tag with ndef payload captured
+{
+  "uid": "1A2B3C4D",
+  "timestamp": "1690876543220",
+  "tag_type": "MIFARE_CLASSIC_4K",
+  "device_id": "PN2133",
+  "data": "https://example.com/asset/12345",
+  "location_info": "Sector_7_Maintenance"
+}
+
+// unknown tag type - still log what we can
+{
+  "uid": "DEADBEEF1337",
+  "timestamp": "1690876543225",
+  "tag_type": "UNKNOWN",
+  "device_id": "PN2133",
+  "data": null,
+  "location_info": null
+}
+
+// ===========================================
+// PARANORMAL_EVENTS PAYLOAD - Entropy Anomalies
+// ===========================================
+
+// basic entropy spike during tag scan
+{
+  "timestamp": "1690876543210",
+  "entropy_value": 612,
+  "deviation": 87,
+  "baseline": 525,
+  "device_id": "PN2133",
+  "event_type": "ENTROPY_SPIKE"
+}
+
+// enhanced anomaly with concurrent tag detection
+{
+  "timestamp": "1690876543210",
+  "entropy_value": 698,
+  "deviation": 142,
+  "baseline": 556,
+  "device_id": "PN2133",
+  "event_type": "ENTROPY_SPIKE",
+  "concurrent_tag_uid": "A4B3C2D1",
+  "environmental_data": "temp:23.4C humid:67% pressure:1013.2hPa",
+  "notes": "sustained spike during tag presence - correlation confirmed"
+}
+
+// extreme deviation event
+{
+  "timestamp": "1690876543230",
+  "entropy_value": 923,
+  "deviation": 398,
+  "baseline": 525,
+  "device_id": "PN2133",
+  "event_type": "EXTREME_DEVIATION",
+  "concurrent_tag_uid": null,
+  "environmental_data": null,
+  "notes": "no concurrent tag - spontaneous anomaly"
+}
+
+// ===========================================
+// HTTP REQUEST HEADERS - Authentication
+// ===========================================
+
+// headers for tag_logs endpoint
+POST /rest/v1/tag_logs HTTP/1.1
+Host: api.supabase.co
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_anon_key_here
+Content-Length: 145
+
+// headers for paranormal_events endpoint  
+POST /rest/v1/paranormal_events HTTP/1.1
+Host: api.supabase.co
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_anon_key_here
+Content-Length: 285
+
+// ===========================================
+// SUPABASE RESPONSE EXAMPLES
+// ===========================================
+
+// successful insert response (201 Created)
+{
+  "id": 1234,
+  "uid": "A4B3C2D1",
+  "timestamp": "1690876543210",
+  "tag_type": "MIFARE_CLASSIC_1K",
+  "device_id": "PN2133",
+  "data": null,
+  "location_info": null,
+  "created_at": "2023-07-31T15:15:43.210000+00:00"
+}
+
+// error response example (400 Bad Request)
+{
+  "code": "23502",
+  "details": "null value in column \"uid\" violates not-null constraint",
+  "hint": null,
+  "message": "null value in column \"uid\" violates not-null constraint"
+}
+
+// ===========================================
+// BATCH INSERT PAYLOAD - Multiple Tags
+// ===========================================
+
+// when logging multiple tags at once (optional optimization)
+[
+  {
+    "uid": "A4B3C2D1",
+    "timestamp": "1690876543210",
+    "tag_type": "MIFARE_CLASSIC_1K",
+    "device_id": "PN2133"
+  },
+  {
+    "uid": "7F6E5D4C3B",
+    "timestamp": "1690876543215",
+    "tag_type": "MIFARE_ULTRALIGHT",
+    "device_id": "PN2133"
+  },
+  {
+    "uid": "1A2B3C4D",
+    "timestamp": "1690876543220",
+    "tag_type": "MIFARE_CLASSIC_4K",
+    "device_id": "PN2133"
+  }
+]
+
+// ===========================================
+// QUERY RESPONSE EXAMPLES
+// ===========================================
+
+// get recent logs response
+{
+  "data": [
+    {
+      "id": 1234,
+      "uid": "A4B3C2D1", 
+      "timestamp": "1690876543210",
+      "tag_type": "MIFARE_CLASSIC_1K",
+      "device_id": "PN2133",
+      "created_at": "2023-07-31T15:15:43.210000+00:00"
+    }
+  ],
+  "count": 1,
+  "error": null
+}
+
+// get paranormal events response
+{
+  "data": [
+    {
+      "id": 567,
+      "timestamp": "1690876543210",
+      "entropy_value": 612,
+      "deviation": 87,
+      "baseline": 525,
+      "device_id": "PN2133",
+      "event_type": "ENTROPY_SPIKE",
+      "created_at": "2023-07-31T15:15:43.210000+00:00"
+    }
+  ],
+  "count": 1,
+  "error": null
+}
+
+// ===========================================
+// ERROR HANDLING EXAMPLES
+// ===========================================
+
+// network timeout - retry logic needed
+{
+  "error": "network_timeout",
+  "message": "request timed out after 30 seconds",
+  "retry_after": 5
+}
+
+// supabase rate limit hit
+{
+  "error": "rate_limit_exceeded", 
+  "message": "too many requests",
+  "retry_after": 60
+}
+
+// invalid api key
+{
+  "error": "invalid_api_key",
+  "message": "API key is invalid",
+  "code": 401
+}
