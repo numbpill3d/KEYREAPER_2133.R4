@@ -113,6 +113,14 @@ MIT — mod it, fork it, flash it.
 
 📑 [Contributing Guidelines](./CONTRIBUTING.md)
 
+## ⚠️ Compiler Warnings
+
+In Arduino IDE, set:
+> **File → Preferences → Compiler Warnings → All**
+
+This enables full warning output during build to help catch bugs and maintain quality.
+
+
 
 ## 🐞 Bug Reporting
 
