@@ -140,5 +140,37 @@ This project uses [AUnit](https://github.com/bxparks/AUnit) for automated testin
 
 ### 🧪 Run Tests (PlatformIO):
 
-```bash
 pio test -e uno_r4_wifi
+
+Make sure your platformio.ini defines the test environment.
+
+
+---
+
+## ✅ Step 3: Use FLOSS License
+
+Since AUnit is **Apache 2.0 licensed**, you're good — this satisfies the **FLOSS requirement**.
+
+---
+
+## ✅ Optional: Add a CI File (GitHub Actions)
+
+Later, if you want to automate this fully:
+
+```yaml
+# .github/workflows/test.yml
+name: Arduino Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install PlatformIO
+        run: pip install platformio
+      - name: Run Unit Tests
+        run: pio test
+
+
