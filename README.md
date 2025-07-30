@@ -77,3 +77,36 @@ Each scanned tag logs:
    git clone https://github.com/numbpill3d/KEYREAPER_2133.R4.git
 
 
+2. Open in Arduino IDE
+
+Board: Arduino Uno R4 WiFi
+Port: Auto-detect
+
+3. Edit main.ino to change SSID/password if needed
+
+4. Upload the sketch
+
+5. Power the device → connect to its WiFi from your phone
+
+6. Visit http://192.168.4.1 in your browser
+
+## 🔐 Write Mode
+
+To write to a tag:
+
+- Use the write section in the UI
+
+- Must be authenticated with a cracked key
+
+- Supports writing raw hex blocks (plaintext or via POST)
+
+⚠️ Legal
+This project is for educational and authorized use only.
+Do not use on systems or tags you do not own or have explicit permission to test.
+
+🧠 Author
+by numbpill3d AKA voidrane
+Device theory + field engineering and components sourced + provided by Xenotrek
+
+📃 License
+MIT — mod it, fork it, flash it.
