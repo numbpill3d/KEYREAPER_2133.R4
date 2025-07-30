@@ -1,0 +1,151 @@
+# Interface Documentation: KEYREAPER\_2133.R4
+
+This document defines the input/output interface and user interactions for **KEYREAPER\_2133.R4**, an embedded RFID/NFC reconnaissance and manipulation device built with the Arduino Uno R4 WiFi and a PN532 I2C shield.
+
+---
+
+## 🛠 Physical Interface
+
+* **Device:** Arduino Uno R4 WiFi
+* **Peripheral:** Adafruit PN532 RFID/NFC Shield (I2C mode)
+* **Power Source:** USB-C or external 5V battery
+* **Network Mode:** WiFi Access Point (AP)
+* **Default IP Address:** `192.168.4.1`
+* **Port:** `80`
+
+---
+
+## 🌐 Web API Endpoints
+
+The device hosts an embedded HTTP server accessible from a browser or any HTTP client. Below is a list of endpoints and expected I/O:
+
+### `GET /`
+
+* **Description:** Serves the main HTML UI for control and monitoring.
+* **Response:** HTML page with JavaScript frontend.
+
+### `GET /api/scan`
+
+* **Description:** Triggers a single tag scan.
+* **Input:** None
+* **Response:**
+
+```json
+{
+  "uid": "04A12BCD56",
+  "type": "MIFARE Classic",
+  "keys_found": ["A0A1A2A3A4A5"],
+  "blocks": [
+    "30 31 32 33 34 35 36 37 38 39 3A 3B 3C 3D 3E 3F"
+  ]
+}
+```
+
+### `POST /api/toggle`
+
+* **Description:** Enables or disables continuous scanning.
+* **Input:** JSON
+
+```json
+{ "state": "on" }
+```
+
+* **Response:** `200 OK` or error message
+
+### `POST /api/aggressive`
+
+* **Description:** Toggles multi-protocol or aggressive scan mode.
+* **Input:** JSON
+
+```json
+{ "mode": "deep" }
+```
+
+* **Response:** `200 OK`
+
+### `GET /api/history`
+
+* **Description:** Returns JSON array of last 20 scanned tags.
+* **Response:**
+
+```json
+[
+  {
+    "uid": "04A12BCD56",
+    "type": "MIFARE Classic",
+    "timestamp": "2025-07-30T01:23:45Z",
+    "keys_found": ["FFFFFFFFFFFF"],
+    "blocks": ["30 31 32 33..."]
+  }
+]
+```
+
+### `POST /api/write`
+
+* **Description:** Writes raw hex data to an authenticated block.
+* **Input:** JSON
+
+```json
+{
+  "uid": "04A12BCD56",
+  "block": 4,
+  "data": "112233445566778899AABBCCDDEEFF00"
+}
+```
+
+* **Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+## 🖥 Web UI Controls
+
+* **Scan Button:** Triggers `/api/scan`
+* **Toggle Button:** Enables continuous polling via `/api/toggle`
+* **Aggressive Mode:** Toggles advanced scan via `/api/aggressive`
+* **History View:** Displays data from `/api/history`
+* **Write Panel:** Sends POST request to `/api/write`
+
+All controls use AJAX or fetch to talk to the backend without page reload.
+
+---
+
+## 🧪 Serial Debug Interface
+
+Accessible via USB Serial Console (e.g., Arduino Serial Monitor):
+
+* **Baud Rate:** 115200
+* **Startup Output:** Prints IP address and device state
+* **Runtime:** Logs all scan events and tag metadata
+
+---
+
+## ⚠️ Security Considerations
+
+* No authentication is currently implemented on web endpoints.
+* Device should not be left powered in public without supervision.
+* Only use on tags you own or are authorized to analyze.
+
+---
+
+## 📡 Example Use Flow
+
+1. Power on device
+2. Connect to `NUANCE2133` WiFi network
+3. Open browser → go to `http://192.168.4.1`
+4. Scan or write tags via interface
+
+---
+
+## 📎 Future Features (Planned)
+
+* Supabase/Neon logging
+* Remote config sync
+* Optional OTA firmware upload via web
+
+---
+
+> Last updated: 2025-07-30
