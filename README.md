@@ -110,3 +110,10 @@ Device theory + field engineering and components sourced + provided by Xenotrek
 
 📃 License
 MIT — mod it, fork it, flash it.
+
+## 🐞 Bug Reporting
+
+Found a bug or unexpected behavior?  
+Please open a new issue here:  
+👉 [https://github.com/numbpill3d/KEYREAPER_2133.R4/issues/new?assignees=&labels=bug&template=bug_report.md&title=%5BBUG%5D+](https://github.com/numbpill3d/KEYREAPER_2133.R4/issues/new?assignees=&labels=bug&template=bug_report.md&title=%5BBUG%5D+)
+
