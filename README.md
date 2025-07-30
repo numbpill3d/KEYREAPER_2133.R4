@@ -117,3 +117,9 @@ Found a bug or unexpected behavior?
 Please open a new issue here:  
 👉 [https://github.com/numbpill3d/KEYREAPER_2133.R4/issues/new?assignees=&labels=bug&template=bug_report.md&title=%5BBUG%5D+](https://github.com/numbpill3d/KEYREAPER_2133.R4/issues/new?assignees=&labels=bug&template=bug_report.md&title=%5BBUG%5D+)
 
+## 🐞 Report Bugs / Suggest Features
+
+Found a bug or want to suggest a feature?
+
+→ [Open an Issue on GitHub](https://github.com/numbpill3d/KEYREAPER_2133.R4/issues)
+
