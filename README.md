@@ -123,3 +123,22 @@ Found a bug or want to suggest a feature?
 
 → [Open an Issue on GitHub](https://github.com/numbpill3d/KEYREAPER_2133.R4/issues)
 
+## 🧪 Running the Test Suite
+
+This project uses [AUnit](https://github.com/bxparks/AUnit) for automated testing.
+
+### 📦 Dependencies:
+- Arduino IDE or PlatformIO
+- AUnit library
+
+### 🛠️ Run Tests (Arduino IDE):
+
+1. Open `test/test_main.cpp` in Arduino IDE.
+2. Select your board: Arduino Uno R4 WiFi.
+3. Upload the sketch.
+4. Open Serial Monitor to view test results.
+
+### 🧪 Run Tests (PlatformIO):
+
+```bash
+pio test -e uno_r4_wifi
