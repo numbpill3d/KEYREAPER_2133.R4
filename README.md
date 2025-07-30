@@ -111,6 +111,9 @@ Device theory + field engineering and components sourced + provided by Xenotrek
 📃 License
 MIT — mod it, fork it, flash it.
 
+📑 [Contributing Guidelines](./CONTRIBUTING.md)
+
+
 ## 🐞 Bug Reporting
 
 Found a bug or unexpected behavior?  
