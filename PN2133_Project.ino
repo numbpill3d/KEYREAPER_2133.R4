@@ -1,9 +1,9 @@
 #include <WiFiS3.h>
 #include <Wire.h>
 
-// WiFi configuration
+// WiFi configuration - FIXED PASSWORD
 const char* ssid = "KEYREAPER_2133.R4";
-const char* password = "2133";
+const char* password = "21332133";
 
 // WiFi server
 WiFiServer server(80);
@@ -14,7 +14,7 @@ WiFiServer server(80);
 // Enhanced card history buffer with detailed data extraction
 struct CardEntry {
   String uid;
-  String cardType;
+  String cardType; 
   String timestamp;
   String rawHexData;
   String readableData;
@@ -23,56 +23,62 @@ struct CardEntry {
   String accessLevel;
 };
 
-CardEntry cardBuffer[25]; // Reduced for memory constraints
+CardEntry cardBuffer[25]; // Fixed buffer size consistency
 int bufferHead = 0;
 int bufferCount = 0;
 
 // System state
 bool continuousScanning = false;
 unsigned long lastScan = 0;
-unsigned long scanInterval = 800; // Faster scanning
+unsigned long scanInterval = 1000; // Slower for reliability
 String systemStatus = "OPERATIONAL";
-bool deepScanMode = true; // Enhanced data extraction
+bool deepScanMode = true;
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial) delay(10); // Wait for serial
   
-  // Initialize I2C
+  Serial.println("[BOOT] KEYREAPER 2133.R4 initializing...");
+  
+  // Initialize I2C with proper pins
   Wire.begin();
+  Wire.setClock(100000); // Slower I2C for reliability
   
-  // Initialize PN532
+  delay(1000); // Let I2C settle
+  
+  // Initialize PN532 with fixed sequence
   if (!initPN532()) {
-    Serial.println("[CRITICAL] PN532 initialization failed - hardware fault detected");
+    Serial.println("[CRITICAL] PN532 initialization failed - check wiring");
     systemStatus = "HARDWARE_FAULT";
-    while(1);
+  } else {
+    Serial.println("[STATUS] PN532 operational - RFID surveillance active");
   }
   
-  Serial.println("[STATUS] PN532 operational - RFID surveillance active");
-  
-  // Setup WiFi Access Point with enhanced security posture
-  Serial.println("[NETWORK] Establishing covert access point...");
+  // Setup WiFi Access Point with correct password
+  Serial.println("[NETWORK] Establishing access point...");
   
   WiFi.end();
-  delay(1000);
+  delay(2000);
   
+  // Set static IP configuration
   WiFi.config(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
   
   if (WiFi.beginAP(ssid, password) == WL_AP_LISTENING) {
-    Serial.println("[NETWORK] Secure mesh established - surveillance grid active");
+    Serial.println("[NETWORK] Secure AP established - surveillance grid active");
     systemStatus = "SURVEILLANCE_ACTIVE";
   } else {
-    Serial.println("[WARNING] Primary AP failed - deploying fallback protocol");
+    Serial.println("[WARNING] AP failed - trying without password");
     WiFi.beginAP(ssid);
     systemStatus = "DEGRADED_MODE";
   }
   
   delay(3000);
   
-  Serial.print("[NETWORK] Grid Status: ");
+  Serial.print("[NETWORK] AP Status: ");
   Serial.println(WiFi.status());
-  Serial.print("[NETWORK] Access Point: ");
+  Serial.print("[NETWORK] SSID: ");
   Serial.println(WiFi.SSID());
-  Serial.print("[NETWORK] Command IP: ");
+  Serial.print("[NETWORK] IP: ");
   Serial.println(WiFi.localIP());
   
   server.begin();
@@ -88,94 +94,126 @@ void loop() {
     lastScan = millis();
   }
   
-  delay(8);
+  delay(10);
 }
 
 bool initPN532() {
-  // Enhanced initialization sequence with multiple attempts
-  for (int attempts = 0; attempts < 3; attempts++) {
+  Serial.println("[INIT] Attempting PN532 initialization...");
+  
+  // Simplified wake-up sequence
+  for (int attempts = 0; attempts < 5; attempts++) {
+    Serial.print("[INIT] Attempt ");
+    Serial.println(attempts + 1);
+    
+    // Send wake-up command
     Wire.beginTransmission(PN532_I2C_ADDRESS);
     Wire.write(0x55); Wire.write(0x55); Wire.write(0x00); Wire.write(0x00);
     Wire.write(0x00); Wire.write(0x00); Wire.write(0x00); Wire.write(0x00);
     Wire.write(0x00); Wire.write(0x00); Wire.write(0x00); Wire.write(0x00);
     Wire.write(0x00); Wire.write(0x00); Wire.write(0x00); Wire.write(0x00);
-    Wire.write(0xFF); Wire.write(0x03); Wire.write(0xFD); Wire.write(0xD4);
-    Wire.write(0x02); Wire.write(0x2A);
     
     if (Wire.endTransmission() == 0) {
-      delay(100);
+      delay(500);
       
-      // SAM Configuration
-      uint8_t samConfig[] = {0x00, 0x00, 0xFF, 0x05, 0xFB, 0xD4, 0x14, 0x01, 0x17, 0x00, 0x00};
+      // Send GetFirmwareVersion command
       Wire.beginTransmission(PN532_I2C_ADDRESS);
-      for (int i = 0; i < sizeof(samConfig); i++) {
-        Wire.write(samConfig[i]);
+      Wire.write(0x00); Wire.write(0x00); Wire.write(0xFF);
+      Wire.write(0x02); Wire.write(0xFE); Wire.write(0xD4);
+      Wire.write(0x02); Wire.write(0x2A); Wire.write(0x00);
+      
+      if (Wire.endTransmission() == 0) {
+        delay(500);
+        
+        // Try SAM configuration
+        Wire.beginTransmission(PN532_I2C_ADDRESS);
+        Wire.write(0x00); Wire.write(0x00); Wire.write(0xFF);
+        Wire.write(0x05); Wire.write(0xFB); Wire.write(0xD4);
+        Wire.write(0x14); Wire.write(0x01); Wire.write(0x17);
+        Wire.write(0x00); Wire.write(0x00);
+        
+        if (Wire.endTransmission() == 0) {
+          Serial.println("[INIT] PN532 responding - initialization successful");
+          delay(500);
+          return true;
+        }
       }
-      Wire.endTransmission();
-      delay(100);
-      return true;
     }
-    delay(200);
+    delay(1000);
   }
   return false;
 }
 
 bool performEnhancedScan() {
-  uint8_t inListCmd[] = {0x00, 0x00, 0xFF, 0x04, 0xFC, 0xD4, 0x4A, 0x01, 0x00, 0xE1, 0x00};
-  
+  // Simplified InListPassiveTarget command for ISO14443A
   Wire.beginTransmission(PN532_I2C_ADDRESS);
-  for (int i = 0; i < sizeof(inListCmd); i++) {
-    Wire.write(inListCmd[i]);
+  Wire.write(0x00); Wire.write(0x00); Wire.write(0xFF);
+  Wire.write(0x04); Wire.write(0xFC); Wire.write(0xD4);
+  Wire.write(0x4A); Wire.write(0x01); Wire.write(0x00);
+  Wire.write(0xE1); Wire.write(0x00);
+  
+  if (Wire.endTransmission() != 0) {
+    return false;
   }
-  Wire.endTransmission();
   
-  delay(100);
+  delay(200); // Give it time to scan
   
-  Wire.requestFrom(PN532_I2C_ADDRESS, 25);
-  if (Wire.available() < 10) return false;
+  // Request response
+  Wire.requestFrom(PN532_I2C_ADDRESS, 30);
   
-  uint8_t response[25];
+  if (Wire.available() < 15) {
+    return false;  
+  }
+  
+  uint8_t response[30];
   int bytesRead = 0;
-  while (Wire.available() && bytesRead < 25) {
+  
+  while (Wire.available() && bytesRead < 30) {
     response[bytesRead] = Wire.read();
     bytesRead++;
   }
   
-  if (bytesRead > 14 && response[7] == 0x4B && response[8] == 0x01) {
+  // Check for valid response
+  if (bytesRead > 14 && response[6] == 0xD5 && response[7] == 0x4B && response[8] == 0x01) {
     int uidLength = response[12];
-    String uid = "";
-    for (int i = 0; i < uidLength && i < 7; i++) {
-      if (response[13 + i] < 0x10) uid += "0";
-      uid += String(response[13 + i], HEX);
+    
+    if (uidLength > 0 && uidLength < 11 && (13 + uidLength) < bytesRead) {
+      String uid = "";
+      for (int i = 0; i < uidLength; i++) {
+        if (response[13 + i] < 0x10) uid += "0";
+        uid += String(response[13 + i], HEX);
+      }
+      uid.toUpperCase();
+      
+      String cardType = determineCardType(uidLength, response, bytesRead);
+      String accessLevel = determineAccessLevel(response);
+      
+      // Create new card entry
+      CardEntry newEntry;
+      newEntry.uid = uid;
+      newEntry.cardType = cardType;
+      newEntry.timestamp = String(millis());
+      newEntry.accessLevel = accessLevel;
+      newEntry.blocksRead = 0;
+      newEntry.rawHexData = "";
+      newEntry.readableData = "";
+      
+      if (deepScanMode) {
+        extractCardData(newEntry);
+      }
+      
+      addEnhancedCardToBuffer(newEntry);
+      
+      Serial.print("[INTERCEPT] UID: ");
+      Serial.print(uid);
+      Serial.print(" | Type: ");
+      Serial.print(cardType);
+      Serial.print(" | Access: ");
+      Serial.println(accessLevel);
+      
+      return true;
     }
-    uid.toUpperCase();
-    
-    String cardType = determineCardType(uidLength, response, bytesRead);
-    String accessLevel = determineAccessLevel(response);
-    
-    // Enhanced data extraction
-    CardEntry newEntry;
-    newEntry.uid = uid;
-    newEntry.cardType = cardType;
-    newEntry.timestamp = String(millis());
-    newEntry.accessLevel = accessLevel;
-    newEntry.blocksRead = 0;
-    
-    if (deepScanMode) {
-      extractCardData(newEntry);
-    }
-    
-    addEnhancedCardToBuffer(newEntry);
-    
-    Serial.print("[INTERCEPT] UID: ");
-    Serial.print(uid);
-    Serial.print(" | Type: ");
-    Serial.print(cardType);
-    Serial.print(" | Access: ");
-    Serial.println(accessLevel);
-    
-    return true;
   }
+  
   return false;
 }
 
@@ -208,81 +246,77 @@ String determineAccessLevel(uint8_t* response) {
 }
 
 void extractCardData(CardEntry& entry) {
-  // Attempt to read multiple data blocks with various authentication keys
-  uint8_t keys[][6] = {
-    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, // Default key
-    {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5}, // Common hotel key
-    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Null key
-    {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC}  // Common weak key
-  };
+  // Simplified data extraction - try to read a few blocks
+  uint8_t defaultKey[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   
-  String combinedHex = "";
-  String readableData = "";
-  
-  for (int block = 1; block < 16 && entry.blocksRead < 10; block++) {
-    for (int keyIndex = 0; keyIndex < 4; keyIndex++) {
-      if (authenticateAndReadBlock(block, keys[keyIndex], entry, keyIndex)) {
-        break; // Successfully read this block, move to next
-      }
+  for (int block = 1; block < 4 && entry.blocksRead < 3; block++) {
+    if (authenticateAndReadBlock(block, defaultKey, entry)) {
+      // Successfully read block
     }
   }
-  
-  entry.rawHexData = combinedHex;
-  entry.readableData = readableData;
 }
 
-bool authenticateAndReadBlock(int blockNum, uint8_t* key, CardEntry& entry, int keyIndex) {
-  // Authenticate
-  uint8_t authCmd[] = {0x00, 0x00, 0xFF, 0x0F, 0xF1, 0xD4, 0x40, 0x01, 0x60, (uint8_t)blockNum};
+bool authenticateAndReadBlock(int blockNum, uint8_t* key, CardEntry& entry) {
+  // Simplified authentication attempt
+  Wire.beginTransmission(PN532_I2C_ADDRESS);
+  Wire.write(0x00); Wire.write(0x00); Wire.write(0xFF);
+  Wire.write(0x0F); Wire.write(0xF1); Wire.write(0xD4);
+  Wire.write(0x40); Wire.write(0x01); Wire.write(0x60);
+  Wire.write((uint8_t)blockNum);
+  
   for (int i = 0; i < 6; i++) {
-    authCmd[10 + i] = key[i];
+    Wire.write(key[i]);
   }
-  authCmd[16] = 0x00; authCmd[17] = 0x00; authCmd[18] = 0x00; authCmd[19] = 0x00;
-  authCmd[20] = 0xC4; authCmd[21] = 0x00;
   
+  Wire.write(0x00); Wire.write(0x00); Wire.write(0x00); Wire.write(0x00);
+  
+  if (Wire.endTransmission() != 0) return false;
+  
+  delay(100);
+  
+  // Try to read the block
   Wire.beginTransmission(PN532_I2C_ADDRESS);
-  for (int i = 0; i < 22; i++) {
-    Wire.write(authCmd[i]);
-  }
-  Wire.endTransmission();
-  delay(50);
+  Wire.write(0x00); Wire.write(0x00); Wire.write(0xFF);
+  Wire.write(0x05); Wire.write(0xFB); Wire.write(0xD4);
+  Wire.write(0x40); Wire.write(0x01); Wire.write(0x30);
+  Wire.write((uint8_t)blockNum); Wire.write(0x00);
   
-  // Read block
-  uint8_t readCmd[] = {0x00, 0x00, 0xFF, 0x05, 0xFB, 0xD4, 0x40, 0x01, 0x30, (uint8_t)blockNum, 0x00};
-  Wire.beginTransmission(PN532_I2C_ADDRESS);
-  for (int i = 0; i < sizeof(readCmd); i++) {
-    Wire.write(readCmd[i]);
-  }
-  Wire.endTransmission();
-  delay(50);
+  if (Wire.endTransmission() != 0) return false;
   
-  Wire.requestFrom(PN532_I2C_ADDRESS, 20);
-  if (Wire.available() >= 16) {
-    uint8_t blockData[16];
+  delay(100);
+  
+  Wire.requestFrom(PN532_I2C_ADDRESS, 26);
+  
+  if (Wire.available() >= 22) {
+    // Skip headers
+    for (int i = 0; i < 8; i++) {
+      if (Wire.available()) Wire.read();
+    }
+    
     String blockHex = "";
     String blockAscii = "";
     
-    // Skip response headers and read data
-    for (int i = 0; i < 8; i++) Wire.read(); // Skip headers
-    
     for (int i = 0; i < 16; i++) {
       if (Wire.available()) {
-        blockData[i] = Wire.read();
-        if (blockData[i] < 0x10) blockHex += "0";
-        blockHex += String(blockData[i], HEX);
+        uint8_t b = Wire.read();
+        if (b < 0x10) blockHex += "0";
+        blockHex += String(b, HEX);
         
-        if (blockData[i] >= 32 && blockData[i] <= 126) {
-          blockAscii += (char)blockData[i];
+        if (b >= 32 && b <= 126) {
+          blockAscii += (char)b;
         } else {
           blockAscii += ".";
         }
       }
     }
     
-    entry.blockData[entry.blocksRead] = "BLK" + String(blockNum) + ":" + blockHex + "|" + blockAscii;
-    entry.blocksRead++;
-    return true;
+    if (blockHex.length() > 0) {
+      entry.blockData[entry.blocksRead] = "BLK" + String(blockNum) + ":" + blockHex + "|" + blockAscii;
+      entry.blocksRead++;
+      return true;
+    }
   }
+  
   return false;
 }
 
@@ -293,8 +327,10 @@ void addEnhancedCardToBuffer(CardEntry& entry) {
 }
 
 bool writeToCard(String hexData) {
+  // First scan for a card
   if (!performEnhancedScan()) return false;
   
+  // Prepare write data
   uint8_t writeData[16] = {0};
   int dataLen = min(32, (int)hexData.length()) / 2;
   
@@ -303,49 +339,39 @@ bool writeToCard(String hexData) {
     writeData[i] = (uint8_t)strtol(byteString.c_str(), NULL, 16);
   }
   
-  // Enhanced write with multiple key attempts
-  uint8_t keys[][6] = {
-    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-    {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5},
-    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-  };
+  uint8_t defaultKey[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   
-  for (int keyIndex = 0; keyIndex < 3; keyIndex++) {
-    uint8_t authCmd[] = {0x00, 0x00, 0xFF, 0x0F, 0xF1, 0xD4, 0x40, 0x01, 0x60, 0x04};
-    for (int i = 0; i < 6; i++) {
-      authCmd[10 + i] = keys[keyIndex][i];
-    }
-    authCmd[16] = 0x00; authCmd[17] = 0x00; authCmd[18] = 0x00; authCmd[19] = 0x00;
-    authCmd[20] = 0xC4; authCmd[21] = 0x00;
-    
-    Wire.beginTransmission(PN532_I2C_ADDRESS);
-    for (int i = 0; i < 22; i++) {
-      Wire.write(authCmd[i]);
-    }
-    Wire.endTransmission();
-    delay(100);
-    
-    uint8_t writeCmd[27] = {0x00, 0x00, 0xFF, 0x15, 0xEB, 0xD4, 0x40, 0x01, 0xA0, 0x04};
-    for (int i = 0; i < 16; i++) {
-      writeCmd[10 + i] = writeData[i];
-    }
-    
-    uint8_t checksum = 0;
-    for (int i = 5; i < 26; i++) {
-      checksum += writeCmd[i];
-    }
-    writeCmd[26] = (uint8_t)(0x100 - checksum);
-    
-    Wire.beginTransmission(PN532_I2C_ADDRESS);
-    for (int i = 0; i < sizeof(writeCmd); i++) {
-      Wire.write(writeCmd[i]);
-    }
-    if (Wire.endTransmission() == 0) {
-      delay(100);
-      return true; // Write successful
-    }
+  // Authenticate to block 4
+  Wire.beginTransmission(PN532_I2C_ADDRESS);
+  Wire.write(0x00); Wire.write(0x00); Wire.write(0xFF);
+  Wire.write(0x0F); Wire.write(0xF1); Wire.write(0xD4);
+  Wire.write(0x40); Wire.write(0x01); Wire.write(0x60);
+  Wire.write(0x04); // Block 4
+  
+  for (int i = 0; i < 6; i++) {
+    Wire.write(defaultKey[i]);
   }
-  return false;
+  
+  Wire.write(0x00); Wire.write(0x00); Wire.write(0x00); Wire.write(0x00);
+  
+  if (Wire.endTransmission() != 0) return false;
+  
+  delay(200);
+  
+  // Write to block 4
+  Wire.beginTransmission(PN532_I2C_ADDRESS);
+  Wire.write(0x00); Wire.write(0x00); Wire.write(0xFF);
+  Wire.write(0x15); Wire.write(0xEB); Wire.write(0xD4);
+  Wire.write(0x40); Wire.write(0x01); Wire.write(0xA0);
+  Wire.write(0x04); // Block 4
+  
+  for (int i = 0; i < 16; i++) {
+    Wire.write(writeData[i]);
+  }
+  
+  Wire.write(0x00);
+  
+  return (Wire.endTransmission() == 0);
 }
 
 void handleWebClients() {
@@ -354,22 +380,32 @@ void handleWebClients() {
   
   String request = "";
   String postData = "";
+  bool isPost = false;
   
-  while (client.connected() && client.available()) {
-    String line = client.readStringUntil('\n');
-    if (line == "\r") {
-      // Read POST data if present
-      if (request.indexOf("POST") >= 0) {
-        while (client.available()) {
-          postData += (char)client.read();
+  // Read the request
+  while (client.connected()) {
+    if (client.available()) {
+      String line = client.readStringUntil('\n');
+      line.trim();
+      
+      if (line.length() == 0) {
+        // End of headers, read POST data if needed
+        if (isPost && client.available()) {
+          postData = client.readStringUntil('\n');
+        }
+        break;
+      }
+      
+      if (request.length() == 0) {
+        request = line;
+        if (request.indexOf("POST") >= 0) {
+          isPost = true;
         }
       }
-      break;
     }
-    if (request.length() == 0) request = line;
   }
   
-  // Enhanced routing
+  // Route the request
   if (request.indexOf("GET / ") >= 0) {
     sendEnhancedWebInterface(client);
   } else if (request.indexOf("GET /api/scan") >= 0) {
@@ -388,6 +424,7 @@ void handleWebClients() {
     send404(client);
   }
   
+  delay(1);
   client.stop();
 }
 
@@ -397,54 +434,200 @@ void sendEnhancedWebInterface(WiFiClient &client) {
   client.println("Connection: close");
   client.println();
   
-  client.println("<!DOCTYPE html><html><head><title>KEYREAPER 2133.R4</title>");
-  client.println("<style>body{font-family:monospace;background:#000;color:#f00;padding:20px;}");
-  client.println(".panel{border:2px solid #f00;padding:20px;margin:10px;background:#111;}");
-  client.println("button{background:#333;color:#f00;border:1px solid #f00;padding:15px;margin:5px;cursor:pointer;}");
-  client.println("button:hover{background:#f00;color:#000;}input{background:#000;color:#f00;border:1px solid #f00;padding:10px;width:300px;}");
-  client.println(".status{text-align:center;font-size:18px;margin:20px;padding:15px;border:1px solid #f00;}");
-  client.println(".history{max-height:400px;overflow-y:auto;border:1px solid #f00;padding:10px;background:#222;}");
-  client.println(".card{border-bottom:1px solid #555;padding:10px;}.uid{color:#fff;font-weight:bold;}</style></head><body>");
+  client.println("<!DOCTYPE html>");
+  client.println("<html>");
+  client.println("<head>");
+  client.println("<title>KEYREAPER 2133.R4</title>");
+  client.println("<meta name='viewport' content='width=device-width, initial-scale=1'>");
+  client.println("<style>");
+  client.println("* { box-sizing: border-box; margin: 0; padding: 0; }");
+  client.println("body { font-family: 'Courier New', monospace; background: #000; color: #0f0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; }");
+  client.println(".header { text-align: center; margin-bottom: 30px; }");
+  client.println("h1 { color: #f00; font-size: 24px; margin-bottom: 10px; }");
+  client.println(".panel { border: 2px solid #0f0; padding: 20px; margin: 10px 0; background: #111; border-radius: 5px; }");
+  client.println("h2 { color: #fff; margin-bottom: 15px; font-size: 18px; }");
+  client.println(".controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }");
+  client.println("button { background: #333; color: #0f0; border: 2px solid #0f0; padding: 12px 20px; cursor: pointer; font-family: inherit; border-radius: 3px; min-width: 120px; }");
+  client.println("button:hover { background: #0f0; color: #000; }");
+  client.println("button:active { background: #fff; }");
+  client.println("input { background: #000; color: #0f0; border: 2px solid #0f0; padding: 12px; width: 100%; max-width: 300px; font-family: inherit; border-radius: 3px; }");
+  client.println(".status { text-align: center; font-size: 16px; margin: 20px 0; padding: 15px; border: 1px solid #0f0; background: #222; border-radius: 3px; }");
+  client.println(".history { max-height: 400px; overflow-y: auto; border: 2px solid #0f0; padding: 15px; background: #222; border-radius: 3px; }");
+  client.println(".card { border-bottom: 1px solid #555; padding: 15px 0; }");
+  client.println(".card:last-child { border-bottom: none; }");
+  client.println(".uid { color: #fff; font-weight: bold; font-size: 16px; margin-bottom: 5px; }");
+  client.println(".card-info { color: #0f0; font-size: 14px; }");
+  client.println(".input-group { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }");
+  client.println("@media (max-width: 768px) { .controls { flex-direction: column; } button, input { width: 100%; } }");
+  client.println("</style>");
+  client.println("</head>");
+  client.println("<body>");
   
+  client.println("<div class='header'>");
   client.println("<h1>KEYREAPER 2133.R4 - CLASSIFIED</h1>");
-  client.println("<div class='panel'><h2>RFID CONTROL</h2>");
+  client.println("</div>");
+  
+  client.println("<div class='panel'>");
+  client.println("<h2>RFID CONTROL SYSTEM</h2>");
+  client.println("<div class='controls'>");
   client.println("<button onclick='scan()'>MANUAL SCAN</button>");
   client.println("<button onclick='toggle()' id='toggleBtn'>START CONTINUOUS</button>");
-  client.println("<button onclick='clear()'>CLEAR</button>");
-  client.println("<div class='status' id='status'>READY</div>");
-  client.println("<input type='text' id='hexInput' placeholder='HEX DATA' maxlength='32'>");
-  client.println("<button onclick='write()'>WRITE</button></div>");
+  client.println("<button onclick='clearHistory()'>CLEAR HISTORY</button>");
+  client.println("<button onclick='refreshStatus()'>REFRESH</button>");
+  client.println("</div>");
+  client.println("<div class='status' id='status'>SYSTEM READY</div>");
+  client.println("<div class='input-group'>");
+  client.println("<input type='text' id='hexInput' placeholder='HEX DATA TO WRITE (32 chars max)' maxlength='32'>");
+  client.println("<button onclick='writeCard()'>WRITE TO CARD</button>");
+  client.println("</div>");
+  client.println("</div>");
   
-  client.println("<div class='panel'><h2>INTERCEPTS</h2>");
-  client.println("<div class='history' id='history'>Awaiting intercepts...</div></div>");
+  client.println("<div class='panel'>");
+  client.println("<h2>RFID INTERCEPTS</h2>");
+  client.println("<div class='history' id='history'>Awaiting intercepts...</div>");
+  client.println("</div>");
   
   client.println("<script>");
-  client.println("let cont=false;");
-  client.println("function scan(){document.getElementById('status').innerHTML='SCANNING...';");
-  client.println("fetch('/api/scan').then(r=>r.json()).then(d=>{");
-  client.println("if(d.success)document.getElementById('status').innerHTML='TARGET: '+d.uid;");
-  client.println("else document.getElementById('status').innerHTML='NO TARGET';refresh();});}");
+  client.println("let continuousMode = false;");
+  client.println("let refreshInterval;");
   
-  client.println("function toggle(){fetch('/api/toggle').then(r=>r.json()).then(d=>{");
-  client.println("cont=d.continuous;document.getElementById('toggleBtn').innerHTML=cont?'STOP':'START';");
-  client.println("document.getElementById('status').innerHTML=cont?'SURVEILLANCE ACTIVE':'PAUSED';});}");
+  client.println("function updateStatus(msg) {");
+  client.println("  document.getElementById('status').innerHTML = msg;");
+  client.println("}");
   
-  client.println("function write(){let h=document.getElementById('hexInput').value;");
-  client.println("if(!h)return;document.getElementById('status').innerHTML='WRITING...';");
-  client.println("fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json'},");
-  client.println("body:JSON.stringify({data:h})}).then(r=>r.json()).then(d=>{");
-  client.println("document.getElementById('status').innerHTML=d.success?'WRITE OK':'WRITE FAILED');");
-  client.println("if(d.success)document.getElementById('hexInput').value='';});}");
+  client.println("function scan() {");
+  client.println("  updateStatus('SCANNING FOR TARGETS...');");
+  client.println("  fetch('/api/scan')");
+  client.println("    .then(response => response.json())");
+  client.println("    .then(data => {");
+  client.println("      if (data.success) {");
+  client.println("        updateStatus('TARGET ACQUIRED: ' + data.uid);");
+  client.println("        refreshHistory();");
+  client.println("      } else {");
+  client.println("        updateStatus('NO TARGET IN RANGE');");
+  client.println("      }");
+  client.println("    })");
+  client.println("    .catch(err => {");
+  client.println("      updateStatus('SCAN ERROR: ' + err.message);");
+  client.println("    });");
+  client.println("}");
   
-  client.println("function refresh(){fetch('/api/history').then(r=>r.json()).then(d=>{");
-  client.println("let h='';if(d.cards&&d.cards.length>0){");
-  client.println("d.cards.forEach(c=>{h+='<div class=\"card\"><div class=\"uid\">'+c.uid+'</div>';");
-  client.println("h+='<div>'+c.type+' | '+new Date(parseInt(c.timestamp)).toLocaleTimeString()+'</div></div>';});}");
-  client.println("else h='No intercepts';document.getElementById('history').innerHTML=h;});}");
+  client.println("function toggle() {");
+  client.println("  fetch('/api/toggle')");
+  client.println("    .then(response => response.json())");
+  client.println("    .then(data => {");
+  client.println("      continuousMode = data.continuous;");
+  client.println("      document.getElementById('toggleBtn').innerHTML = continuousMode ? 'STOP CONTINUOUS' : 'START CONTINUOUS';");
+  client.println("      updateStatus(continuousMode ? 'SURVEILLANCE MODE ACTIVE' : 'SURVEILLANCE MODE PAUSED');");
+  client.println("      if (continuousMode) {");
+  client.println("        startAutoRefresh();");
+  client.println("      } else {");
+  client.println("        stopAutoRefresh();");
+  client.println("      }");
+  client.println("    })");
+  client.println("    .catch(err => {");
+  client.println("      updateStatus('TOGGLE ERROR: ' + err.message);");
+  client.println("    });");
+  client.println("}");
   
-  client.println("function clear(){document.getElementById('history').innerHTML='Cleared';}");
-  client.println("refresh();setInterval(()=>{if(cont)refresh();},3000);");
-  client.println("</script></body></html>");
+  client.println("function writeCard() {");
+  client.println("  let hexData = document.getElementById('hexInput').value.trim();");
+  client.println("  if (!hexData) {");
+  client.println("    updateStatus('NO HEX DATA PROVIDED');");
+  client.println("    return;");
+  client.println("  }");
+  client.println("  if (hexData.length % 2 !== 0 || hexData.length > 32) {");
+  client.println("    updateStatus('INVALID HEX DATA FORMAT');");
+  client.println("    return;");
+  client.println("  }");
+  client.println("  updateStatus('WRITING TO TARGET...');");
+  client.println("  fetch('/api/write', {");
+  client.println("    method: 'POST',");
+  client.println("    headers: { 'Content-Type': 'application/json' },");
+  client.println("    body: JSON.stringify({ data: hexData })");
+  client.println("  })");
+  client.println("    .then(response => response.json())");
+  client.println("    .then(data => {");
+  client.println("      if (data.success) {");
+  client.println("        updateStatus('WRITE SUCCESSFUL');");
+  client.println("        document.getElementById('hexInput').value = '';");
+  client.println("      } else {");
+  client.println("        updateStatus('WRITE FAILED: ' + (data.error || 'UNKNOWN ERROR'));");
+  client.println("      }");
+  client.println("    })");
+  client.println("    .catch(err => {");
+  client.println("      updateStatus('WRITE ERROR: ' + err.message);");
+  client.println("    });");
+  client.println("}");
+  
+  client.println("function refreshHistory() {");
+  client.println("  fetch('/api/history')");
+  client.println("    .then(response => response.json())");
+  client.println("    .then(data => {");
+  client.println("      let historyHtml = '';");
+  client.println("      if (data.cards && data.cards.length > 0) {");
+  client.println("        data.cards.forEach(card => {");
+  client.println("          let timestamp = new Date(parseInt(card.timestamp)).toLocaleTimeString();");
+  client.println("          historyHtml += '<div class=\"card\">';");
+  client.println("          historyHtml += '<div class=\"uid\">UID: ' + card.uid + '</div>';");
+  client.println("          historyHtml += '<div class=\"card-info\">' + card.type + ' | ' + card.access + ' | ' + timestamp + '</div>';");
+  client.println("          if (card.blockCount > 0) {");
+  client.println("            historyHtml += '<div class=\"card-info\">Blocks Read: ' + card.blockCount + '</div>';");
+  client.println("          }");
+  client.println("          historyHtml += '</div>';");
+  client.println("        });");
+  client.println("      } else {");
+  client.println("        historyHtml = 'No intercepts recorded';");
+  client.println("      }");
+  client.println("      document.getElementById('history').innerHTML = historyHtml;");
+  client.println("    })");
+  client.println("    .catch(err => {");
+  client.println("      document.getElementById('history').innerHTML = 'History refresh error: ' + err.message;");
+  client.println("    });");
+  client.println("}");
+  
+  client.println("function clearHistory() {");
+  client.println("  document.getElementById('history').innerHTML = 'History cleared';");
+  client.println("  updateStatus('HISTORY CLEARED');");
+  client.println("}");
+  
+  client.println("function refreshStatus() {");
+  client.println("  fetch('/api/status')");
+  client.println("    .then(response => response.json())");
+  client.println("    .then(data => {");
+  client.println("      updateStatus('STATUS: ' + data.status + ' | BUFFER: ' + data.buffer_used + '/25');");
+  client.println("      continuousMode = data.continuous;");
+  client.println("      document.getElementById('toggleBtn').innerHTML = continuousMode ? 'STOP CONTINUOUS' : 'START CONTINUOUS';");
+  client.println("    })");
+  client.println("    .catch(err => {");
+  client.println("      updateStatus('STATUS ERROR: ' + err.message);");
+  client.println("    });");
+  client.println("}");
+  
+  client.println("function startAutoRefresh() {");
+  client.println("  if (refreshInterval) clearInterval(refreshInterval);");
+  client.println("  refreshInterval = setInterval(() => {");
+  client.println("    if (continuousMode) {");
+  client.println("      refreshHistory();");  
+  client.println("    }");
+  client.println("  }, 2000);");
+  client.println("}");
+  
+  client.println("function stopAutoRefresh() {");
+  client.println("  if (refreshInterval) {");
+  client.println("    clearInterval(refreshInterval);");
+  client.println("    refreshInterval = null;");
+  client.println("  }");
+  client.println("}");
+  
+  client.println("// Initialize on page load");
+  client.println("document.addEventListener('DOMContentLoaded', function() {");
+  client.println("  refreshHistory();");
+  client.println("  refreshStatus();");
+  client.println("});");
+  
+  client.println("</script>");
+  client.println("</body></html>");
 }
 
 void handleManualScan(WiFiClient &client) {
@@ -479,30 +662,32 @@ void sendEnhancedCardHistory(WiFiClient &client) {
   
   client.print("{\"cards\":[");
   
-  int startIndex = (bufferHead - bufferCount + 25) % 25;
-  for (int i = bufferCount - 1; i >= 0; i--) { // Reverse order for newest first
-    if (i < bufferCount - 1) client.print(",");
-    int index = (startIndex + i) % 75;
-    
-    client.print("{\"uid\":\"");
-    client.print(cardBuffer[index].uid);
-    client.print("\",\"type\":\"");
-    client.print(cardBuffer[index].cardType);
-    client.print("\",\"access\":\"");
-    client.print(cardBuffer[index].accessLevel);
-    client.print("\",\"timestamp\":\"");
-    client.print(cardBuffer[index].timestamp);
-    client.print("\",\"blockCount\":");
-    client.print(cardBuffer[index].blocksRead);
-    client.print(",\"blocks\":[");
-    
-    for (int j = 0; j < cardBuffer[index].blocksRead; j++) {
-      if (j > 0) client.print(",");
-      client.print("\"");
-      client.print(cardBuffer[index].blockData[j]);
-      client.print("\"");
+  if (bufferCount > 0) {
+    int startIndex = (bufferHead - bufferCount + 25) % 25;
+    for (int i = bufferCount - 1; i >= 0; i--) { // Newest first
+      if (i < bufferCount - 1) client.print(",");
+      int index = (startIndex + i) % 25;
+      
+      client.print("{\"uid\":\"");
+      client.print(cardBuffer[index].uid);
+      client.print("\",\"type\":\"");
+      client.print(cardBuffer[index].cardType);
+      client.print("\",\"access\":\"");
+      client.print(cardBuffer[index].accessLevel);
+      client.print("\",\"timestamp\":\"");
+      client.print(cardBuffer[index].timestamp);
+      client.print("\",\"blockCount\":");
+      client.print(cardBuffer[index].blocksRead);
+      client.print(",\"blocks\":[");
+      
+      for (int j = 0; j < cardBuffer[index].blocksRead; j++) {
+        if (j > 0) client.print(",");
+        client.print("\"");
+        client.print(cardBuffer[index].blockData[j]);
+        client.print("\"");
+      }
+      client.print("]}");
     }
-    client.print("]}");
   }
   
   client.println("]}");
@@ -512,6 +697,7 @@ void handleEnhancedWriteRequest(WiFiClient &client, String postData) {
   int dataStart = postData.indexOf("\"data\":\"") + 8;
   int dataEnd = postData.indexOf("\"", dataStart);
   String hexData = "";
+  
   if (dataStart > 7 && dataEnd > dataStart) {
     hexData = postData.substring(dataStart, dataEnd);
   }
@@ -572,7 +758,7 @@ void sendSystemStatus(WiFiClient &client) {
   client.print(systemStatus);
   client.print("\",\"buffer_used\":");
   client.print(bufferCount);
-  client.print(",\"buffer_max\":75");
+  client.print(",\"buffer_max\":25");
   client.print(",\"continuous\":");
   client.print(continuousScanning ? "true" : "false");
   client.print(",\"deepmode\":");
